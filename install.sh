@@ -90,17 +90,14 @@ xattr -cr "$APP_PATH" 2>/dev/null
 touch "$APP_PATH"
 echo "   ✅ Приложение создано"
 
-# ─── 5. Ярлык ──────────────────────────────────────────────
-echo "[5/5] Создаю ярлык на рабочий стол..."
-ln -sf "$APP_PATH" "$HOME/Desktop/Fireworks Generator" 2>/dev/null
-echo "   ✅ Готово"
+# ─── 5. Готово ──────────────────────────────────────────────
 
 echo ""
 echo "═══════════════════════════════════════════════"
 echo "  ✅ Установка завершена!"
 echo "═══════════════════════════════════════════════"
 echo ""
-echo "  🚀 Запускай: Fireworks Generator на рабочем столе"
+echo "  🚀 Запускай: ~/Applications/FW_Image.app"
 echo "  📂 Картинки: ~/Applications/FW_Image/generated_images/"
 echo "  🔑 При первом запуске введи API ключ Fireworks AI"
 echo ""
