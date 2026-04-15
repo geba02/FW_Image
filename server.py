@@ -75,6 +75,8 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
             self._copy_to_folder()
         elif self.path == "/api/save_key":
             self._save_key()
+        elif self.path == "/api/delete":
+            self._delete_image()
         elif self.path.startswith("/api/"):
             self._proxy_post()
         else:
@@ -126,6 +128,28 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"key": key}).encode())
+        except Exception as e:
+            self._json_error(500, str(e))
+
+    # ── Удаление картинки ───────────────────────────────────
+    def _delete_image(self):
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length)
+            data = json.loads(body)
+            filename = data.get("filename", "")
+            if not filename:
+                self._json_error(400, "No filename")
+                return
+            safe = Path(filename).name
+            filepath = OUTPUT_DIR / safe
+            if filepath.exists():
+                filepath.unlink()
+            self.send_response(200)
+            self._cors_headers()
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"ok": True}).encode())
         except Exception as e:
             self._json_error(500, str(e))
 
