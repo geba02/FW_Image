@@ -7,7 +7,7 @@
 Открой **Терминал** и вставь:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/geba02/FW_Image/main/install.sh | bash
+curl --http1.1 -fsSL https://raw.githubusercontent.com/geba02/FW_Image/main/install.sh | bash
 ```
 
 ## Что установится
