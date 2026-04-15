@@ -478,7 +478,7 @@ function renderHistory() {
     const div = document.createElement('div');
     div.className = 'history-thumb';
     div.title = item.filename || item.prompt?.slice(0, 80) || '';
-    div.innerHTML = `<img src="${item.url}" alt="gen ${i}" loading="lazy"><span class="delete-btn">✕</span>`;
+    div.innerHTML = `<img src="${item.url}" alt="gen ${i}" loading="lazy"><span class="delete-btn" data-file="${item.filename || ''}">✕</span>`;
     div.querySelector('img').onclick = () => {
       $('resultImg').src = item.url;
       $('resultArea').classList.add('visible');
@@ -486,15 +486,17 @@ function renderHistory() {
       currentPromptText = item.prompt || '';
       $('resultArea').scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
-    div.querySelector('.delete-btn').onclick = (e) => {
+    div.querySelector('.delete-btn').addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
-      deleteImage(item.filename, i);
-    };
+      const fn = e.target.dataset.file;
+      if (fn) deleteImage(fn);
+    });
     grid.appendChild(div);
   });
 }
 
-async function deleteImage(filename, index) {
+async function deleteImage(filename) {
   if (!filename) return;
   try {
     const resp = await fetch(PROXY + '/api/delete', {
