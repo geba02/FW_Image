@@ -1,7 +1,7 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════
 # 🎨 Fireworks Image Generator — Установщик
-# Запуск: curl -fsSL https://raw.githubusercontent.com/geba02/FW_Image/master/install.sh | bash
+# Запуск: curl -fsSL https://raw.githubusercontent.com/geba02/FW_Image/main/install.sh | bash
 # ═══════════════════════════════════════════════════
 
 set -e
@@ -87,6 +87,29 @@ cat > "$APP_PATH/Contents/Info.plist" << PLIST
 PLIST
 
 xattr -cr "$APP_PATH" 2>/dev/null
+
+# Иконка 🎨
+ICON_TMP=$(mktemp -d)
+cat > "$ICON_TMP/icon.html" << 'ICONHTML'
+<html><body style="margin:0;padding:0;width:1024px;height:1024px;background:transparent;display:flex;align-items:center;justify-content:center;"><div style="width:1024px;height:1024px;background:#0e0e12;border-radius:228px;display:flex;align-items:center;justify-content:center;"><span style="font-size:680px;line-height:1;">🎨</span></div></body></html>
+ICONHTML
+qlmanage -t -s 1024 -o "$ICON_TMP" "$ICON_TMP/icon.html" >/dev/null 2>&1
+SRC="$ICON_TMP/icon.html.png"
+if [ -f "$SRC" ]; then
+    ISET="$ICON_TMP/AppIcon.iconset"
+    mkdir -p "$ISET"
+    for pair in "16:icon_16x16" "32:icon_16x16@2x" "32:icon_32x32" "64:icon_32x32@2x" "128:icon_128x128" "256:icon_128x128@2x" "256:icon_256x256" "512:icon_256x256@2x" "512:icon_512x512" "1024:icon_512x512@2x"; do
+        sz=${pair%%:*}; name=${pair#*:}
+        sips -z $sz $sz "$SRC" --out "$ISET/${name}.png" >/dev/null 2>&1
+    done
+    iconutil -c icns "$ISET" -o /tmp/fw_icon.icns 2>/dev/null
+    if [ -f /tmp/fw_icon.icns ]; then
+        cp /tmp/fw_icon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
+    fi
+fi
+rm -rf "$ICON_TMP" /tmp/fw_icon.icns 2>/dev/null
+touch "$APP_PATH"
+
 echo "   ✅ Приложение создано"
 
 # ─── 5. Ярлык ──────────────────────────────────────────────
