@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 RED='\033[1;31m'
 NC='\033[0m'
 
-REPO="https://raw.githubusercontent.com/geba02/FW_Image/master"
+REPO="https://raw.githubusercontent.com/geba02/FW_Image/main"
 INSTALL_DIR="$HOME/Applications/FW_Image"
 APP_PATH="$HOME/Applications/FW_Image.app"
 
