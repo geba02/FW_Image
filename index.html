@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fireworks Generator</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #202020;
+    --surface: #202020;
+    --surface-2: #202020;
+    --border: #ffffff50;
+    --border-focus: #f97316;
+    --text: #e8e6e3;
+    --text-dim: #8a8898;
+    --accent: #202020;
+    --accent-glow: rgba(249, 115, 22, 0.15);
+    --accent-hover: #fb923c;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --radius: 25px;
+    --radius-sm: 25px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    opacity: 0.03; pointer-events: none; z-index: 9999;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .ambient { position: fixed; width: 600px; height: 600px; border-radius: 50%; filter: blur(120px); opacity: 0.07; pointer-events: none; z-index: 0; }
+  .ambient-1 { top: -200px; left: -100px; background: #f97316; }
+  .ambient-2 { bottom: -300px; right: -150px; background: #7c3aed; }
+
+  .shell { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 32px 20px 60px; }
+
+  header { text-align: center; margin-bottom: 36px; }
+  header h1 {
+    font-size: 32px; font-weight: 700; letter-spacing: -1px;
+    background: linear-gradient(135deg, #fff 40%, var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  header p { color: var(--text-dim); font-size: 14px; margin-top: 6px; }
+  header .save-path {
+    display: inline-block; margin-top: 8px; padding: 4px 12px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 6px; font-family: 'Space Mono', monospace;
+    font-size: 12px; color: var(--accent-hover);
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; margin-bottom: 20px;
+  }
+
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+  label {
+    display: block; font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1.2px; color: var(--text-dim); margin-bottom: 8px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  select, textarea {
+    width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 15px;
+    padding: 12px 14px; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
+  select { cursor: pointer; padding-right: 36px; }
+  select:focus, textarea:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+  .select-wrap { position: relative; }
+  .select-wrap::after {
+    content: '▾'; position: absolute; right: 14px; top: 50%;
+    transform: translateY(-50%); color: var(--text-dim); pointer-events: none; font-size: 13px;
+  }
+
+  textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+
+  .api-row { margin-bottom: 20px; }
+  .api-row input {
+    width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text);
+    font-family: 'Space Mono', monospace; font-size: 13px;
+    padding: 11px 14px; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .api-row input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+  .btn-generate {
+    width: 100%; margin-top: 20px; padding: 16px; border: none; border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: all 0.25s ease; overflow: hidden;
+    background: linear-gradient(135deg, #f97316, #ea580c); color: #fff;
+  }
+  .btn-generate:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(249, 115, 22, 0.35); }
+  .btn-generate:active:not(:disabled) { transform: translateY(0); }
+  .btn-generate:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .status-bar {
+    margin-top: 16px; padding: 12px 16px; border-radius: var(--radius-sm);
+    font-family: 'Space Mono', monospace; font-size: 13px; line-height: 1.5;
+    display: none;
+  }
+  .status-bar.loading { display: block; background: var(--accent-glow); border: 1px solid rgba(249,115,22,0.25); color: var(--accent-hover); }
+  .status-bar.success { display: block; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: var(--success); }
+  .status-bar.error { display: block; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: var(--danger); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(249,115,22,0.25); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+
+  .result-area { margin-top: 20px; display: none; }
+  .result-area.visible { display: block; }
+  .result-img-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .result-img-wrap img { width: 100%; display: block; }
+
+  .result-actions { display: flex; gap: 10px; margin-top: 12px; }
+  .btn-secondary {
+    flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface-2); color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); background: var(--accent-glow); color: var(--accent-hover); }
+
+  .history-title {
+    font-size: 13px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1.2px; color: var(--text-dim);
+    font-family: 'Space Mono', monospace; margin-bottom: 14px;
+  }
+  .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .history-thumb {
+    aspect-ratio: 1; border-radius: var(--radius-sm); overflow: hidden;
+    border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;
+  }
+  .history-thumb:hover { border-color: var(--accent); transform: scale(1.03); }
+  .history-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  @media (max-width: 600px) {
+    .controls { grid-template-columns: 1fr; }
+    header h1 { font-size: 24px; }
+    .card { padding: 20px; }
+    .shell { padding: 20px 14px 40px; }
+  }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .card { animation: fadeUp 0.5s ease both; }
+  .card:nth-child(2) { animation-delay: 0.08s; }
+  .card:nth-child(3) { animation-delay: 0.16s; }
+</style>
+</head>
+<body>
+
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<div class="shell">
+
+  <header>
+    <h1>🎨 Fireworks Generator</h1>
+    <p>Генерация изображений через FLUX</p>
+    <div class="save-path">📂 Автосохранение → generated_images/</div>
+  </header>
+
+  <div class="card">
+    <div class="api-row">
+      <label for="apiKey">API Key</label>
+      <div style="display:flex;gap:10px;">
+        <input type="password" id="apiKey" value="" placeholder="fw_..." style="flex:1;">
+        <button class="btn-secondary" onclick="saveApiKey()" style="flex:none;width:auto;padding:10px 18px;font-size:13px;">💾 Сохранить</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div>
+        <label for="model">Модель</label>
+        <div class="select-wrap">
+          <select id="model">
+            <option value="flux-1-schnell-fp8" data-type="sync" data-steps="4">⚡ Schnell — Быстро</option>
+            <option value="flux-1-dev-fp8" data-type="sync" data-steps="25" selected>📸 FLUX.1 Dev — Качество</option>
+            <option value="flux-kontext-pro" data-type="async" data-steps="0">🎨 Kontext Pro — Дизайн</option>
+            <option value="flux-kontext-max" data-type="async" data-steps="0">💎 Kontext Max — Максимум</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label for="ratio">Формат</label>
+        <div class="select-wrap">
+          <select id="ratio">
+            <option value="1:1">1:1 — Квадрат</option>
+            <option value="16:9" selected>16:9 — Широкий</option>
+            <option value="9:16">9:16 — Вертикальный</option>
+            <option value="4:3">4:3 — Классика</option>
+            <option value="3:2">3:2 — Фотоплёнка</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <label for="prompt">Промпт</label>
+    <textarea id="prompt" placeholder="Опишите изображение на английском... (Ctrl+Enter — генерация)"></textarea>
+
+    <button class="btn-generate" id="btnGenerate" onclick="generate()">🚀 Сгенерировать</button>
+
+    <div class="status-bar" id="status"></div>
+  </div>
+
+  <div class="result-area" id="resultArea">
+    <div class="card">
+      <div class="result-img-wrap">
+        <img id="resultImg" src="" alt="Generated image">
+      </div>
+      <div class="result-actions">
+        <button class="btn-secondary" onclick="copyToFolder()">📂 Сохранить в...</button>
+        <button class="btn-secondary" onclick="copyPrompt()">📋 Скопировать промпт</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="historyCard" style="display:none;">
+    <div class="history-title">История генераций</div>
+    <div class="history-grid" id="historyGrid"></div>
+  </div>
+
+</div>
+
+<script>
+const PROXY = window.location.origin;
+let currentBlob = null;
+let currentPromptText = '';
+let lastSavedFilename = '';
+let history = [];
+
+const $ = id => document.getElementById(id);
+
+function showStatus(type, msg) {
+  const el = $('status');
+  el.className = 'status-bar ' + type;
+  el.innerHTML = (type === 'loading' ? '<span class="spinner"></span>' : '') + msg;
+}
+function hideStatus() { $('status').className = 'status-bar'; }
+
+// ── Proxy fetch ──────────────────────────────────────────────
+async function proxyFetch(fwPath, fwKey, fwBody, accept = 'application/json') {
+  const resp = await fetch(PROXY + '/api/proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fw_path: fwPath, fw_key: fwKey, fw_body: fwBody, accept }),
+  });
+
+  if (!resp.ok) {
+    let errMsg;
+    try { const j = await resp.json(); errMsg = j.error || resp.statusText; }
+    catch { errMsg = await resp.text(); }
+    throw new Error(`Ошибка ${resp.status}: ${errMsg}`);
+  }
+
+  return resp;
+}
+
+// ── Sync (Schnell, Pro) ─────────────────────────────────────
+async function generateSync(apiKey, modelId, steps, prompt, ratio) {
+  const fwPath = `/inference/v1/workflows/accounts/fireworks/models/${modelId}/text_to_image`;
+  const body = { prompt, aspect_ratio: ratio, seed: 0 };
+  if (steps > 0) body.num_inference_steps = steps;
+
+  const resp = await proxyFetch(fwPath, apiKey, body, 'image/png');
+  return await resp.blob();
+}
+
+// ── Async (Kontext) ─────────────────────────────────────────
+async function generateAsync(apiKey, modelId, prompt, ratio) {
+  const basePath = `/inference/v1/workflows/accounts/fireworks/models/${modelId}`;
+
+  // Submit
+  const submitResp = await proxyFetch(basePath, apiKey, {
+    prompt, aspect_ratio: ratio, output_format: 'png', safety_tolerance: 5,
+  });
+  const submitData = await submitResp.json();
+  const requestId = submitData.request_id || submitData.id;
+  if (!requestId) throw new Error('Нет request_id: ' + JSON.stringify(submitData));
+
+  showStatus('loading', 'Задание отправлено, ожидание...');
+
+  // Poll
+  for (let i = 1; i <= 60; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+
+    let pollResp;
+    try {
+      pollResp = await proxyFetch(`${basePath}/get_result`, apiKey, { id: requestId });
+    } catch { continue; }
+
+    const result = await pollResp.json();
+    let status = result.status;
+    if (typeof status === 'object') status = status.status || '';
+    status = String(status).toLowerCase();
+
+    if (['ready', 'completed', 'complete'].includes(status)) {
+      const sample = result.result;
+      let imageUrl = null;
+      if (typeof sample === 'object' && sample) imageUrl = sample.sample || sample.url || sample.image;
+      else if (typeof sample === 'string') imageUrl = sample;
+
+      if (imageUrl && imageUrl.startsWith('http')) {
+        const imgResp = await fetch(PROXY + '/api/fetch_image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: imageUrl }),
+        });
+        if (!imgResp.ok) throw new Error('Не удалось скачать картинку');
+        return await imgResp.blob();
+      } else if (imageUrl && imageUrl.length > 200) {
+        const b64 = imageUrl.includes(',') ? imageUrl.split(',')[1] : imageUrl;
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        return new Blob([bytes], { type: 'image/png' });
+      }
+      throw new Error('Неизвестный формат: ' + JSON.stringify(result));
+    }
+    if (['failed', 'error'].includes(status)) throw new Error('Не удалась: ' + JSON.stringify(result));
+    showStatus('loading', `Ожидание... ${i * 2} сек`);
+  }
+  throw new Error('Таймаут: 2 минуты');
+}
+
+// ── Save to server folder ───────────────────────────────────
+async function saveToFolder(blob, filename) {
+  try {
+    const reader = new FileReader();
+    const b64 = await new Promise((res, rej) => {
+      reader.onload = () => res(reader.result);
+      reader.onerror = rej;
+      reader.readAsDataURL(blob);
+    });
+
+    const resp = await fetch(PROXY + '/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, image_b64: b64 }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      console.log('Saved:', data.path);
+      return data.path;
+    }
+  } catch (e) {
+    console.warn('Auto-save failed:', e);
+  }
+  return null;
+}
+
+// ── Main ────────────────────────────────────────────────────
+async function generate() {
+  const apiKey = $('apiKey').value.trim();
+  const prompt = $('prompt').value.trim();
+  const ratio = $('ratio').value;
+  const opt = $('model').options[$('model').selectedIndex];
+  const modelId = $('model').value;
+  const apiType = opt.dataset.type;
+  const steps = parseInt(opt.dataset.steps) || 0;
+
+  if (!apiKey) { showStatus('error', '❌ Введите API ключ'); return; }
+  if (!prompt) { showStatus('error', '❌ Введите промпт'); return; }
+
+  const btn = $('btnGenerate');
+  btn.disabled = true;
+  btn.textContent = '⏳ Генерация...';
+  currentPromptText = prompt;
+
+  showStatus('loading', 'Отправка запроса...');
+
+  const t0 = performance.now();
+  try {
+    let blob;
+    if (apiType === 'sync') blob = await generateSync(apiKey, modelId, steps, prompt, ratio);
+    else blob = await generateAsync(apiKey, modelId, prompt, ratio);
+
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+    const sizeKB = (blob.size / 1024).toFixed(0);
+
+    currentBlob = blob;
+    const url = URL.createObjectURL(blob);
+    $('resultImg').src = url;
+    $('resultArea').classList.add('visible');
+
+    // Auto-save
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const slug = prompt.split(/\s+/).slice(0, 4).join('_').replace(/[^\w_-]/g, '').slice(0, 30);
+    const filename = `${ts}_${slug || 'image'}.png`;
+    const savedPath = await saveToFolder(blob, filename);
+    lastSavedFilename = filename;
+
+    const saveInfo = savedPath ? ` · 💾 ${filename}` : '';
+    showStatus('success', `✅ Готово — ${elapsed} сек · ${sizeKB} KB${saveInfo}`);
+
+    addToHistory(url, prompt);
+  } catch (err) {
+    showStatus('error', '❌ ' + err.message);
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🚀 Сгенерировать';
+  }
+}
+
+function copyToFolder() {
+  if (!lastSavedFilename) return;
+  fetch(PROXY + '/api/copy_to', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename: lastSavedFilename }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) showStatus('success', '✅ Сохранено: ' + data.path);
+    else if (data.cancelled) showStatus('loading', 'Отменено');
+    else showStatus('error', '❌ ' + (data.error || 'Ошибка'));
+    setTimeout(hideStatus, 3000);
+  })
+  .catch(e => showStatus('error', '❌ ' + e.message));
+}
+
+function copyPrompt() {
+  navigator.clipboard.writeText(currentPromptText).then(() => {
+    showStatus('success', '📋 Промпт скопирован');
+    setTimeout(hideStatus, 2000);
+  });
+}
+
+function addToHistory(url, prompt) {
+  history.unshift({ url, prompt });
+  if (history.length > 20) history.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  if (!history.length) { $('historyCard').style.display = 'none'; return; }
+  $('historyCard').style.display = '';
+  const grid = $('historyGrid');
+  grid.innerHTML = '';
+  history.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'history-thumb';
+    div.title = item.filename || item.prompt?.slice(0, 80) || '';
+    div.innerHTML = `<img src="${item.url}" alt="gen ${i}" loading="lazy">`;
+    div.onclick = () => {
+      $('resultImg').src = item.url;
+      $('resultArea').classList.add('visible');
+      lastSavedFilename = item.filename || '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    grid.appendChild(div);
+  });
+}
+
+async function loadHistory() {
+  try {
+    const resp = await fetch(PROXY + '/api/history');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (!data.files || !data.files.length) return;
+    history = data.files.map(f => ({
+      url: PROXY + '/api/image/' + encodeURIComponent(f),
+      filename: f,
+    }));
+    renderHistory();
+  } catch (e) {
+    console.warn('History load failed:', e);
+  }
+}
+
+loadHistory();
+loadApiKey();
+
+function saveApiKey() {
+  const key = $('apiKey').value.trim();
+  if (!key) { showStatus('error', '❌ Введите ключ'); return; }
+  fetch(PROXY + '/api/save_key', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) showStatus('success', '✅ Ключ сохранён');
+    else showStatus('error', '❌ Ошибка сохранения');
+    setTimeout(hideStatus, 2000);
+  });
+}
+
+async function loadApiKey() {
+  try {
+    const resp = await fetch(PROXY + '/api/load_key');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.key) $('apiKey').value = data.key;
+  } catch (e) {}
+}
+
+$('prompt').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); generate(); }
+});
+</script>
+</body>
+</html>
