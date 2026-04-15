@@ -48,6 +48,18 @@ SCRIPT_DIR = Path(__file__).parent
 OUTPUT_DIR = SCRIPT_DIR / "generated_images"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+# Файл для хранения промптов
+PROMPTS_FILE = SCRIPT_DIR / ".prompts.json"
+
+def _load_prompts():
+    if PROMPTS_FILE.exists():
+        try: return json.loads(PROMPTS_FILE.read_text())
+        except: pass
+    return {}
+
+def _save_prompts(data):
+    PROMPTS_FILE.write_text(json.dumps(data, ensure_ascii=False))
+
 # SSL контекст для urllib
 ctx = ssl.create_default_context()
 
@@ -145,6 +157,9 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
             filepath = OUTPUT_DIR / safe
             if filepath.exists():
                 filepath.unlink()
+            prompts = _load_prompts()
+            prompts.pop(safe, None)
+            _save_prompts(prompts)
             self.send_response(200)
             self._cors_headers()
             self.send_header("Content-Type", "application/json")
@@ -161,11 +176,12 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
                  if f.is_file() and f.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp')],
                 reverse=True
             )
+            prompts = _load_prompts()
             self.send_response(200)
             self._cors_headers()
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"files": files}).encode())
+            self.wfile.write(json.dumps({"files": files, "prompts": prompts}).encode())
         except Exception as e:
             self._json_error(500, str(e))
 
@@ -320,24 +336,29 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
 
             filename = data.get("filename", "image.png")
             image_b64 = data.get("image_b64", "")
+            prompt = data.get("prompt", "")
 
             if not image_b64:
                 self._json_error(400, "No image data")
                 return
 
-            # Убираем data:image/png;base64, если есть
             if "," in image_b64:
                 image_b64 = image_b64.split(",", 1)[1]
 
             image_bytes = base64.b64decode(image_b64)
 
-            # Безопасное имя файла
             safe_name = "".join(c for c in filename if c.isalnum() or c in "._- ").strip()
             if not safe_name:
                 safe_name = "image.png"
 
             filepath = OUTPUT_DIR / safe_name
             filepath.write_bytes(image_bytes)
+
+            # Сохраняем промпт
+            if prompt:
+                prompts = _load_prompts()
+                prompts[safe_name] = prompt
+                _save_prompts(prompts)
 
             self.send_response(200)
             self._cors_headers()

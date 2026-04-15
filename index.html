@@ -372,7 +372,7 @@ async function saveToFolder(blob, filename) {
     const resp = await fetch(PROXY + '/api/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename, image_b64: b64 }),
+      body: JSON.stringify({ filename, image_b64: b64, prompt }),
     });
     const data = await resp.json();
     if (data.ok) {
@@ -483,6 +483,7 @@ function renderHistory() {
       $('resultImg').src = item.url;
       $('resultArea').classList.add('visible');
       lastSavedFilename = item.filename || '';
+      currentPromptText = item.prompt || '';
       $('resultArea').scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
     div.querySelector('.delete-btn').onclick = (e) => {
@@ -515,10 +516,12 @@ async function loadHistory() {
     const resp = await fetch(PROXY + '/api/history');
     if (!resp.ok) return;
     const data = await resp.json();
-    if (!data.files || !data.files.length) return;
+    if (!data.files || !data.files.length) { history = []; renderHistory(); return; }
+    const prompts = data.prompts || {};
     history = data.files.map(f => ({
       url: PROXY + '/api/image/' + encodeURIComponent(f),
       filename: f,
+      prompt: prompts[f] || '',
     }));
     renderHistory();
   } catch (e) {
