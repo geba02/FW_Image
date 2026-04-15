@@ -157,7 +157,10 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
             filepath = OUTPUT_DIR / safe
             if filepath.exists():
                 filepath.unlink()
+            # Удаляем промпт
             prompts = _load_prompts()
+            prompts.pop(safe, None)
+            _save_prompts(prompts)
             prompts.pop(safe, None)
             _save_prompts(prompts)
             self.send_response(200)
@@ -177,11 +180,12 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
                 reverse=True
             )
             prompts = _load_prompts()
+            items = [{"filename": f, "prompt": prompts.get(f, "")} for f in files]
             self.send_response(200)
             self._cors_headers()
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"files": files, "prompts": prompts}).encode())
+            self.wfile.write(json.dumps({"files": items}).encode())
         except Exception as e:
             self._json_error(500, str(e))
 

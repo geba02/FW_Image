@@ -457,10 +457,33 @@ function copyToFolder() {
 }
 
 function copyPrompt() {
-  navigator.clipboard.writeText(currentPromptText).then(() => {
-    showStatus('success', '📋 Промпт скопирован');
-    setTimeout(hideStatus, 2000);
-  });
+  const text = currentPromptText || $('prompt').value.trim();
+  if (!text) { showStatus('error', '❌ Нет промпта'); return; }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        showStatus('success', '📋 Промпт скопирован');
+        setTimeout(hideStatus, 2000);
+      }).catch(() => fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+  } catch (e) {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  showStatus('success', '📋 Промпт скопирован');
+  setTimeout(hideStatus, 2000);
 }
 
 function addToHistory(url, prompt) {
@@ -484,6 +507,7 @@ function renderHistory() {
       $('resultArea').classList.add('visible');
       lastSavedFilename = item.filename || '';
       currentPromptText = item.prompt || '';
+      $('prompt').value = item.prompt || '';
       $('resultArea').scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
     div.querySelector('.delete-btn').addEventListener('click', (e) => {
@@ -519,11 +543,10 @@ async function loadHistory() {
     if (!resp.ok) return;
     const data = await resp.json();
     if (!data.files || !data.files.length) { history = []; renderHistory(); return; }
-    const prompts = data.prompts || {};
-    history = data.files.map(f => ({
-      url: PROXY + '/api/image/' + encodeURIComponent(f),
-      filename: f,
-      prompt: prompts[f] || '',
+    history = data.files.map(item => ({
+      url: PROXY + '/api/image/' + encodeURIComponent(item.filename || item),
+      filename: item.filename || item,
+      prompt: item.prompt || '',
     }));
     renderHistory();
   } catch (e) {
